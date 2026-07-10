@@ -1,13 +1,48 @@
 """Busca sob demanda: sem persistência, sem inscrição. Cada chamada roda
 a busca na hora e devolve os resultados relevantes já formatados."""
+import calendar
 import datetime as dt
 
 from harvesters import openalex
 from taxon_match import evaluate_article
 
 
-def run_search(taxon_name: str, uf: str = None, window_days: int = 30):
-    articles = openalex.search_taxon_articles(taxon_name, window_days=window_days)
+def parse_from_date(raw: str) -> str:
+    """Data inicial (De): ano, ano-mês, ou data completa. Obrigatória.
+    Parcial vira o primeiro dia do período (ex: '2020' -> '2020-01-01')."""
+    raw = (raw or "").strip()
+    if not raw:
+        raise ValueError("Data inicial (De) é obrigatória.")
+    if len(raw) == 4 and raw.isdigit():
+        raw = f"{raw}-01-01"
+    elif len(raw) == 7:
+        raw = f"{raw}-01"
+    try:
+        return dt.date.fromisoformat(raw).isoformat()
+    except ValueError:
+        raise ValueError(f"Data inicial inválida: '{raw}'. Use AAAA, AAAA-MM ou AAAA-MM-DD.")
+
+
+def parse_to_date(raw: str) -> str:
+    """Data final (Até): ano, ano-mês, ou data completa. Vazio = hoje.
+    Parcial vira o último dia do período (ex: '2020' -> '2020-12-31')."""
+    raw = (raw or "").strip()
+    if not raw:
+        return dt.date.today().isoformat()
+    if len(raw) == 4 and raw.isdigit():
+        raw = f"{raw}-12-31"
+    elif len(raw) == 7:
+        year, month = raw.split("-")
+        last_day = calendar.monthrange(int(year), int(month))[1]
+        raw = f"{raw}-{last_day:02d}"
+    try:
+        return dt.date.fromisoformat(raw).isoformat()
+    except ValueError:
+        raise ValueError(f"Data final inválida: '{raw}'. Use AAAA, AAAA-MM ou AAAA-MM-DD.")
+
+
+def run_search(taxon_name: str, uf: str, from_date: str, to_date: str):
+    articles = openalex.search_taxon_articles(taxon_name, from_date, to_date)
     results = []
     for article in articles:
         evaluation = evaluate_article(article, taxon_name, uf)
@@ -42,10 +77,11 @@ def zoobank_link(r: dict):
     return f"https://zoobank.org/References/{uuid}"
 
 
-def format_txt(taxon_name: str, uf: str, results: list) -> str:
+def format_txt(taxon_name: str, uf: str, from_date: str, to_date: str, results: list) -> str:
     lines = [
         f"Resultado da busca — {dt.datetime.now().isoformat(timespec='seconds')}",
         f"Táxon: {taxon_name}" + (f" | UF: {uf}" if uf else ""),
+        f"Período: {from_date} a {to_date}",
         "=" * 60,
         "",
     ]

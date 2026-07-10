@@ -2,24 +2,22 @@
 
 API gratuita, sem chave. Docs: https://docs.openalex.org
 """
-import datetime as dt
 import re
 import requests
 
-from config import OPENALEX_MAILTO, HARVEST_WINDOW_DAYS
+from config import OPENALEX_MAILTO
 
 BASE_URL = "https://api.openalex.org/works"
 
 
-def search_taxon_articles(taxon_name: str, window_days: int = None):
-    """Busca works recentes cujo título/abstract cite o taxon."""
-    window_days = window_days or HARVEST_WINDOW_DAYS
-    since = (dt.date.today() - dt.timedelta(days=window_days)).isoformat()
-
+def search_taxon_articles(taxon_name: str, from_date: str, to_date: str):
+    """Busca works cujo título/abstract cite o taxon, publicados entre
+    from_date e to_date (ISO YYYY-MM-DD, ambos inclusive)."""
     params = {
         "filter": (
             f"title_and_abstract.search:{taxon_name},"
-            f"from_publication_date:{since},"
+            f"from_publication_date:{from_date},"
+            f"to_publication_date:{to_date},"
             f"type:article"
         ),
         "per_page": 50,

@@ -10,7 +10,7 @@
   form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
   input, select { padding: .4rem; }
   input[name="taxon_name"] { flex: 1; min-width: 200px; }
-  input[name="window_days"] { width: 5rem; }
+  input[name="from_date"], input[name="to_date"] { width: 9rem; }
   button { padding: .4rem 1rem; cursor: pointer; }
   .flash { padding: .5rem .8rem; border-radius: 4px; margin-bottom: .5rem; }
   .flash.ok { background: #e6f4ea; color: #1e7e34; }
@@ -42,18 +42,15 @@
       <option value="{{ s }}" {% if s == uf %}selected{% endif %}>{{ s }}</option>
     {% endfor %}
   </select>
-  <select name="window_days">
-    {% for value, label in window_options.items() %}
-      <option value="{{ value }}" {% if value == window_days %}selected{% endif %}>{{ label }}</option>
-    {% endfor %}
-  </select>
+  <label>De <input type="text" name="from_date" placeholder="AAAA, AAAA-MM ou AAAA-MM-DD" value="{{ from_date or '' }}" required></label>
+  <label>Até <input type="text" name="to_date" placeholder="vazio = hoje" value="{{ to_date or '' }}"></label>
   <button type="submit">Buscar</button>
 </form>
 
 {% if results is not none %}
 <h2>Resultado ({{ results | length }})</h2>
 {% if results %}
-  <p><a href="{{ url_for('download', taxon_name=taxon_name, uf=uf, window_days=window_days) }}">Baixar .txt</a></p>
+  <p><a href="{{ url_for('download', taxon_name=taxon_name, uf=uf, from_date=from_date, to_date=to_date) }}">Baixar .txt</a></p>
   {% for r in results %}
   <div class="result">
     <span class="tag">{{ r.record_type if r.record_type != 'unclassified' else 'sem classificação' }}</span>
@@ -64,7 +61,7 @@
   </div>
   {% endfor %}
 {% else %}
-  <p class="muted">Nenhum artigo encontrado nessa janela de busca.</p>
+  <p class="muted">Nenhum artigo encontrado nesse período.</p>
 {% endif %}
 {% endif %}
 
