@@ -10,19 +10,22 @@
   form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
   input, select { padding: .4rem; }
   input[name="taxon_name"] { flex: 1; min-width: 200px; }
+  input[name="window_days"] { width: 5rem; }
   button { padding: .4rem 1rem; cursor: pointer; }
-  table { border-collapse: collapse; width: 100%; margin-top: .5rem; }
-  th, td { border: 1px solid #ddd; padding: .4rem .6rem; text-align: left; font-size: .9rem; }
   .flash { padding: .5rem .8rem; border-radius: 4px; margin-bottom: .5rem; }
   .flash.ok { background: #e6f4ea; color: #1e7e34; }
   .flash.error { background: #fdecea; color: #b71c1c; }
-  pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; white-space: pre-wrap; font-size: .85rem; }
+  .result { border: 1px solid #ddd; border-radius: 6px; padding: .8rem 1rem; margin-bottom: .8rem; }
+  .result .tag { display: inline-block; background: #eef; color: #334; border-radius: 3px; padding: .1rem .5rem; font-size: .8rem; margin-bottom: .4rem; }
+  .result .ref { font-size: .9rem; line-height: 1.4; }
+  .result a { color: #1a5fb4; }
+  .muted { color: #666; font-size: .9rem; }
 </style>
 </head>
 <body>
 
 <h1>Alerta de Fauna do Brasil</h1>
-<p>Busca artigos científicos (OpenAlex) descrevendo/registrando espécies da fauna do Brasil, por táxon.</p>
+<p>Busca artigos científicos (OpenAlex) descrevendo/registrando espécies da fauna do Brasil, por táxon. Sem cadastro — digite e busque a cada visita.</p>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% for category, msg in messages %}
@@ -30,44 +33,38 @@
   {% endfor %}
 {% endwith %}
 
-<h2>Nova inscrição</h2>
-<form method="post" action="{{ url_for('subscribe') }}">
-  <input type="email" name="email" placeholder="seu@email.com" required>
-  <input type="text" name="taxon_name" placeholder="Genus species (ex: Harpia harpyja)" required>
+<form method="post" action="{{ url_for('search') }}">
+  <input type="text" name="taxon_name" placeholder="Genus species (ex: Harpia harpyja)" value="{{ taxon_name or '' }}" required>
   <select name="uf">
     <option value="">UF (opcional)</option>
-    {% for uf in states %}
-      <option value="{{ uf }}">{{ uf }}</option>
+    {% for s in states %}
+      <option value="{{ s }}" {% if s == uf %}selected{% endif %}>{{ s }}</option>
     {% endfor %}
   </select>
-  <button type="submit">Inscrever</button>
+  <select name="window_days">
+    {% for value, label in window_options.items() %}
+      <option value="{{ value }}" {% if value == window_days %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Buscar</button>
 </form>
 
-<h2>Inscrições ativas</h2>
-{% if subs %}
-<table>
-  <tr><th>Email</th><th>Táxon</th><th>UF</th></tr>
-  {% for s in subs %}
-  <tr><td>{{ s['user_email'] }}</td><td>{{ s['taxon_name'] }}</td><td>{{ s['uf'] or '—' }}</td></tr>
+{% if results is not none %}
+<h2>Resultado ({{ results | length }})</h2>
+{% if results %}
+  <p><a href="{{ url_for('download', taxon_name=taxon_name, uf=uf, window_days=window_days) }}">Baixar .txt</a></p>
+  {% for r in results %}
+  <div class="result">
+    <span class="tag">{{ r.record_type if r.record_type != 'unclassified' else 'sem classificação' }}</span>
+    <div class="ref">{{ format_reference(r) }}</div>
+    {% set zb = zoobank_link(r) %}
+    {% if zb %}<div class="muted">ZooBank: <a href="{{ zb }}" target="_blank">{{ r.zoobank_lsid }}</a></div>{% endif %}
+    {% if not r.doi %}<div class="muted"><a href="https://openalex.org/{{ r.source_id.rsplit('/', 1)[-1] }}" target="_blank">Ver no OpenAlex</a></div>{% endif %}
+  </div>
   {% endfor %}
-</table>
 {% else %}
-<p>Nenhuma inscrição ainda.</p>
+  <p class="muted">Nenhum artigo encontrado nessa janela de busca.</p>
 {% endif %}
-
-<h2>Executar busca</h2>
-<form method="post" action="{{ url_for('run') }}">
-  <button type="submit">Rodar busca agora</button>
-</form>
-
-{% if run_log %}
-<h2>Log da execução</h2>
-<pre>{{ run_log | join('\n') }}</pre>
-{% endif %}
-
-{% if report_content %}
-<h2>Resultado</h2>
-<pre>{{ report_content }}</pre>
 {% endif %}
 
 </body>
