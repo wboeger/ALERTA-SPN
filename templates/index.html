@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>Alerta Fauna do Brasil</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+  h1 { font-size: 1.4rem; }
+  h2 { font-size: 1.1rem; margin-top: 2rem; }
+  form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
+  input, select { padding: .4rem; }
+  input[name="taxon_name"] { flex: 1; min-width: 200px; }
+  button { padding: .4rem 1rem; cursor: pointer; }
+  table { border-collapse: collapse; width: 100%; margin-top: .5rem; }
+  th, td { border: 1px solid #ddd; padding: .4rem .6rem; text-align: left; font-size: .9rem; }
+  .flash { padding: .5rem .8rem; border-radius: 4px; margin-bottom: .5rem; }
+  .flash.ok { background: #e6f4ea; color: #1e7e34; }
+  .flash.error { background: #fdecea; color: #b71c1c; }
+  pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; white-space: pre-wrap; font-size: .85rem; }
+</style>
+</head>
+<body>
+
+<h1>Alerta de Fauna do Brasil</h1>
+<p>Busca artigos científicos (OpenAlex) descrevendo/registrando espécies da fauna do Brasil, por táxon.</p>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, msg in messages %}
+    <div class="flash {{ category }}">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<h2>Nova inscrição</h2>
+<form method="post" action="{{ url_for('subscribe') }}">
+  <input type="email" name="email" placeholder="seu@email.com" required>
+  <input type="text" name="taxon_name" placeholder="Genus species (ex: Harpia harpyja)" required>
+  <select name="uf">
+    <option value="">UF (opcional)</option>
+    {% for uf in states %}
+      <option value="{{ uf }}">{{ uf }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Inscrever</button>
+</form>
+
+<h2>Inscrições ativas</h2>
+{% if subs %}
+<table>
+  <tr><th>Email</th><th>Táxon</th><th>UF</th></tr>
+  {% for s in subs %}
+  <tr><td>{{ s['user_email'] }}</td><td>{{ s['taxon_name'] }}</td><td>{{ s['uf'] or '—' }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>Nenhuma inscrição ainda.</p>
+{% endif %}
+
+<h2>Executar busca</h2>
+<form method="post" action="{{ url_for('run') }}">
+  <button type="submit">Rodar busca agora</button>
+</form>
+
+{% if run_log %}
+<h2>Log da execução</h2>
+<pre>{{ run_log | join('\n') }}</pre>
+{% endif %}
+
+{% if report_content %}
+<h2>Resultado</h2>
+<pre>{{ report_content }}</pre>
+{% endif %}
+
+</body>
+</html>
