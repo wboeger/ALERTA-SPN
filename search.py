@@ -42,14 +42,14 @@ def parse_to_date(raw: str) -> str:
 
 
 def run_search(taxon_name: str, uf: str, from_date: str, to_date: str):
-    articles = openalex.search_taxon_articles(taxon_name, from_date, to_date)
+    articles, truncated, total_count = openalex.search_taxon_articles(taxon_name, from_date, to_date)
     results = []
     for article in articles:
         evaluation = evaluate_article(article, taxon_name, uf)
         if evaluation is None:
             continue
         results.append({**article, **evaluation})
-    return results
+    return results, truncated, total_count
 
 
 def format_reference(r: dict) -> str:

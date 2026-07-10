@@ -49,7 +49,14 @@ def search():
             taxon_name=taxon_name, uf=uf, from_date=from_raw, to_date=to_raw,
         )
 
-    results = run_search(taxon_name, uf, from_date, to_date)
+    results, truncated, total_count = run_search(taxon_name, uf, from_date, to_date)
+    if truncated:
+        flash(
+            f"A API retornou {total_count} artigos brutos pra esse táxon/período — "
+            f"acima do teto de segurança, resultado pode estar incompleto. "
+            f"Restrinja o período ou informe uma UF pra afinar a busca.",
+            "error",
+        )
 
     return render_template(
         "index.html",
@@ -76,7 +83,7 @@ def download():
     except ValueError as e:
         return str(e), 400
 
-    results = run_search(taxon_name, uf, from_date, to_date)
+    results, _truncated, _total = run_search(taxon_name, uf, from_date, to_date)
     content = format_txt(taxon_name, uf, from_date, to_date, results)
 
     filename = f"resultado_busca_{taxon_name.replace(' ', '_')}.txt"
